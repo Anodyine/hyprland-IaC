@@ -1,2 +1,2 @@
 # Hyprland IaC
-Automated Arch Linux installation configuration using archinstall.
+Automated Arch Linux + hyprland + ml4w installation configuration using archinstall.
