@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# hash: {{ include "dot_config/systemd/user/hyprland-session.target" | sha256sum }}
+# hash: {{ include "dot_config/systemd/user/sunshine.service.d/override.conf" | sha256sum }}
+
+echo "Systemd configuration changed. Reloading..."
+systemctl --user daemon-reload
+systemctl --user enable sunshine
