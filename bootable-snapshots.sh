@@ -94,7 +94,6 @@ echo ">> Installing Bootloader with Btrfs modules..."
 # This aligns the binary search path with our stub file location
 sudo grub-install --target=x86_64-efi \
   --efi-directory=/boot/efi \
-  --boot-directory=/boot/efi \
   --bootloader-id=GRUB \
   --modules="btrfs part_gpt part_msdos" \
   --recheck
