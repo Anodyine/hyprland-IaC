@@ -1,0 +1,297 @@
+#!/usr/bin/env bash
+# run_once_setup.sh.tmpl
+
+# -----------------------------------------------------------------------------
+# CHEZMOI TRIGGERS
+# This script will re-run if any of these files change because their hashes
+# are embedded in this comment block (Template Expansion).
+#
+# Pacman List Hash:  {{ include "packages.pacman.list" | sha256sum }}
+# Yay List Hash:     {{ include "packages.yay.list" | sha256sum }}
+# Flatpak List Hash: {{ include "packages.flatpak.list" | sha256sum }}
+# -----------------------------------------------------------------------------
+
+set -euo pipefail
+
+# ---------- globals
+OSREL="/etc/os-release"
+PACCONF="/etc/pacman.conf"
+BACKUP="/etc/pacman.conf.bak.$(date +%Y%m%d-%H%M%S)"
+
+# CHANGE: Use absolute path from Chezmoi template variable
+# The .chezmoi.sourceDir variable resolves to ~/.local/share/chezmoi
+SOURCE_DIR="{{ .chezmoi.sourceDir }}"
+
+PACMAN_LIST="$SOURCE_DIR/packages.pacman.list"
+YAY_LIST="$SOURCE_DIR/packages.yay.list"
+FLATPAK_LIST="$SOURCE_DIR/packages.flatpak.list"
+
+
+CHAOTIC_KEY="3056513887B78AEB"
+CHAOTIC_KEYRING_URL='https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'
+CHAOTIC_MIRRORLIST_URL='https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+
+# ---------- helpers
+read_list() {
+  local file="$1"
+  [ -f "$file" ] || return 1
+  sed -e 's/#.*$//' -e '/^\s*$/d' "$file"
+}
+
+preflight() {
+  [ -r "$OSREL" ] && grep -q '^ID=arch' "$OSREL" || { err "This script targets Arch Linux."; exit 1; }
+  need_cmd sudo
+  need_cmd pacman
+  need_cmd sed
+  need_cmd tee
+}
+
+backup_pacman_conf() {
+  if [ -f "$PACCONF" ]; then
+    sudo cp -a "$PACCONF" "$BACKUP"
+    info "Backed up pacman.conf to $BACKUP"
+  fi
+}
+
+enable_multilib() {
+  # Check if [multilib] is already active
+  if ! grep -q '^\[multilib\]' "$PACCONF"; then
+    # Check if commented [multilib] exists
+    if grep -q '^\s*#\s*\[multilib\]' "$PACCONF"; then
+      info "Enabling [multilib]..."
+      
+      # 1. Search for the block starting with #[multilib] and ending at the next empty line
+      # 2. Inside that block ONLY, uncomment the Include line
+      sudo sed -i '/^#\s*\[multilib\]/,/^$/ s|^\s*#\s*Include|Include|' "$PACCONF"
+      
+      # 3. Uncomment the [multilib] header itself
+      sudo sed -i 's/^\s*#\s*\[multilib\]/[multilib]/' "$PACCONF"
+      
+      info "Enabled existing [multilib] block."
+    else
+      # Append if not found at all
+      printf "\n[multilib]\nInclude = /etc/pacman.d/mirrorlist\n" | sudo tee -a "$PACCONF" >/dev/null
+      info "Appended new [multilib] block."
+    fi
+  fi
+}
+
+add_lizardbyte_repo() {
+  if ! grep -q '^\[lizardbyte\]' "$PACCONF"; then
+    cat <<'REPO' | sudo tee -a "$PACCONF" >/dev/null
+
+[lizardbyte]
+SigLevel = Optional
+Server = https://github.com/LizardByte/pacman-repo/releases/latest/download
+REPO
+    info "Added [lizardbyte] repo."
+  fi
+}
+
+setup_chaotic_aur() {
+  if ! sudo pacman-key --list-keys | grep -q "$CHAOTIC_KEY"; then
+    info "Importing Chaotic-AUR key ($CHAOTIC_KEY)"
+    sudo pacman-key --keyserver keyserver.ubuntu.com --recv-key "$CHAOTIC_KEY" || \
+    sudo pacman-key --keyserver hkp://keyserver.ubuntu.com:80 --recv "$CHAOTIC_KEY"
+    sudo pacman-key --lsign-key "$CHAOTIC_KEY"
+  fi
+
+  info "Installing chaotic-keyring and chaotic-mirrorlist"
+  sudo pacman -U --noconfirm "$CHAOTIC_KEYRING_URL" "$CHAOTIC_MIRRORLIST_URL" || \
+    warn "Could not install chaotic-* from CDN. You can retry later."
+
+  if ! grep -q '^\[chaotic-aur\]' "$PACCONF"; then
+    cat <<'REPO' | sudo tee -a "$PACCONF" >/dev/null
+
+[chaotic-aur]
+Include = /etc/pacman.d/chaotic-mirrorlist
+REPO
+    info "Added [chaotic-aur] repo."
+  fi
+}
+
+refresh_pacman() {
+  info "Refreshing pacman databases"
+  sudo pacman -Syy
+}
+
+ensure_flatpak_flathub() {
+  if ! command -v flatpak >/dev/null 2>&1; then
+    info "Installing flatpak"
+    sudo pacman -S --needed --noconfirm flatpak
+  fi
+
+  if ! flatpak remote-list --user | awk '{print $1}' | grep -qx flathub; then
+    info "Adding Flathub (user)"
+    flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+  else
+    info "Flathub already configured."
+  fi
+}
+
+install_pacman_pkgs() {
+  if [ -f "$PACMAN_LIST" ]; then
+    mapfile -t PKGS < <(read_list "$PACMAN_LIST" || true)
+    if [ "${#PKGS[@]}" -gt 0 ]; then
+      info "Installing pacman packages: ${#PKGS[@]}"
+      sudo pacman -S --needed --noconfirm "${PKGS[@]}"
+    else
+      info "No pacman packages to install."
+    fi
+  else
+    info "No $PACMAN_LIST found. Skipping pacman step."
+  fi
+}
+
+install_yay_pkgs() {
+  if [ -f "$YAY_LIST" ]; then
+    if ! command -v yay >/dev/null 2>&1; then
+      warn "yay not found. Attempting to install yay from repos."
+      sudo pacman -S --needed --noconfirm yay || warn "Could not install yay automatically."
+    fi
+    if command -v yay >/dev/null 2>&1; then
+      mapfile -t AY < <(read_list "$YAY_LIST" || true)
+      if [ "${#AY[@]}" -gt 0 ]; then
+        info "Installing AUR packages via yay: ${#AY[@]}"
+        yay -S --needed --noconfirm "${AY[@]}"
+      else
+        info "No yay packages to install."
+      fi
+    else
+      warn "Skipping yay installs. Install yay and rerun if needed."
+    fi
+  else
+    info "No $YAY_LIST found. Skipping yay step."
+  fi
+}
+
+install_flatpak_apps() {
+  if [ -f "$FLATPAK_LIST" ]; then
+    mapfile -t FP < <(read_list "$FLATPAK_LIST" || true)
+    if [ "${#FP[@]}" -gt 0 ]; then
+      info "Installing Flatpak apps from Flathub (user): ${#FP[@]}"
+      for app in "${FP[@]}"; do
+        flatpak install --user -y flathub "$app" || warn "Failed Flatpak: $app"
+      done
+    else
+      info "No Flatpak apps to install."
+    fi
+  else
+    info "No $FLATPAK_LIST found. Skipping Flatpak step."
+  fi
+}
+
+enable_sshd_service() {
+  need_cmd systemctl
+
+  # Ensure openssh is installed
+  if ! pacman -Qq openssh >/dev/null 2>&1; then
+    info "Installing openssh"
+    sudo pacman -S --needed --noconfirm openssh
+  fi
+
+  # Try common unit names without pre-checks. Let systemctl tell us if it exists.
+  local tried=()
+  for unit in sshd.service ssh.service sshd.socket; do
+    tried+=("$unit")
+    if sudo systemctl enable --now "$unit" >/dev/null 2>&1; then
+      info "Enabled and started $unit"
+      # If socket-activated, check the service state name as well
+      local svc="${unit/.socket/.service}"
+      if systemctl is-active --quiet "$svc"; then
+        info "SSH is active."
+      else
+        # Socket may be active and will spawn service on demand
+        systemctl is-active --quiet "$unit" && info "SSH socket is active. Service will start on demand."
+      fi
+      return 0
+    fi
+  done
+
+  warn "Could not enable any SSH unit. Tried: ${tried[*]}"
+  warn "Check available units with: systemctl list-unit-files | grep -E '^ssh|^sshd'"
+  warn "And logs with: sudo journalctl -u sshd -u ssh"
+}
+
+install_oh_my_zsh() {
+  if [ -d "${HOME}/.oh-my-zsh" ]; then
+    info "Oh My Zsh already installed at ~/.oh-my-zsh"
+    return
+  fi
+  info "Installing Oh My Zsh (non-interactive)."
+  export RUNZSH=no
+  export CHSH=no
+  export KEEP_ZSHRC=yes
+  sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+}
+
+install_plugins() {
+  local ZSH_CUSTOM="${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}"
+  mkdir -p "${ZSH_CUSTOM}/plugins"
+
+  if [ ! -d "${ZSH_CUSTOM}/plugins/zsh-autosuggestions/.git" ]; then
+    info "Installing zsh-autosuggestions plugin."
+    git clone https://github.com/zsh-users/zsh-autosuggestions "${ZSH_CUSTOM}/plugins/zsh-autosuggestions"
+  else
+    info "Updating zsh-autosuggestions plugin."
+    git -C "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" pull --ff-only || warn "autosuggestions update failed"
+  fi
+
+  if [ ! -d "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting/.git" ]; then
+    info "Installing zsh-syntax-highlighting plugin."
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting"
+  else
+    info "Updating zsh-syntax-highlighting plugin."
+    git -C "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" pull --ff-only || warn "syntax-highlighting update failed"
+  fi
+}
+
+make_default_shell() {
+  local zsh_path
+  zsh_path="$(command -v zsh || true)"
+  if [ -z "$zsh_path" ]; then
+    err "zsh not found on PATH. Aborting default shell change."
+    return
+  fi
+
+  # Ensure /etc/shells contains zsh
+  if ! grep -qx "$zsh_path" /etc/shells 2>/dev/null; then
+    info "Adding ${zsh_path} to /etc/shells (requires sudo)."
+    echo "$zsh_path" | sudo tee -a /etc/shells >/dev/null
+  fi
+
+  if [ "${SHELL:-}" = "$zsh_path" ]; then
+    info "zsh is already the default shell."
+  else
+    info "Changing default shell to zsh for user ${USER}."
+    chsh -s "$zsh_path"
+    info "Default shell changed. Log out and back in, or start zsh now with: zsh"
+  fi
+}
+
+main() {
+  preflight
+  backup_pacman_conf
+  enable_multilib
+  add_lizardbyte_repo
+  setup_chaotic_aur
+  refresh_pacman
+  ensure_flatpak_flathub
+  install_pacman_pkgs
+  install_yay_pkgs
+  install_flatpak_apps
+  install_oh_my_zsh
+  install_plugins
+  make_default_shell
+  enable_sshd_service
+
+  # Install informant last so its hook doesn’t block anything else
+  # If you run this, you will need to read the latest news before
+  # updating or installing packages. That way, you won't miss required manual
+  # interventions.
+  # To install more packages run: "sudo informant read --all"
+  sudo pacman -S --needed --noconfirm informant
+  info "All done."
+}
+
+main "$@"
