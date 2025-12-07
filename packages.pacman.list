@@ -4,10 +4,10 @@ xdg-desktop-portal-hyprland
 waybar
 rofi-wayland
 swaync
-swww                    # Wallpaper daemon
+swww
 hyprlock
 hypridle
-hyprshade               # Blue light filter
+hyprshade               # MOVED: Available in Chaotic
 polkit-gnome
 thunar
 tumbler
@@ -18,7 +18,7 @@ network-manager-applet
 bluez
 bluez-utils
 blueman
-kitty                   # Critical: ML4W scripts hardcode 'kitty'
+kitty
 fastfetch
 imagemagick
 pinta
@@ -32,13 +32,26 @@ slurp
 swappy
 wl-clipboard
 cliphist
+grimblast-git           # MOVED: Available in Chaotic
 
-# --- Python Dependencies (Required for Apps) ---
+# --- Python Dependencies ---
 python-pip
 python-gobject
 python-screeninfo
 python-pywayland
 python-requests
+python-pywal            # MOVED: Available in Chaotic
+
+# --- Theming (Chaotic AUR Optimized) ---
+wlogout                 # MOVED: Available in Chaotic
+nwg-look                # MOVED: Available in Chaotic
+waypaper                # MOVED: Available in Chaotic
+matugen                 # MOVED: Use 'matugen' (pre-built), not '-bin'
+oh-my-posh              # MOVED: Use 'oh-my-posh' (pre-built), not '-bin'
+bibata-cursor-theme     # MOVED: Available in Chaotic
+colloid-icon-theme-git  # MOVED: Available in Chaotic
+ttf-bebas-neue          # MOVED: Available in Chaotic
+ttf-material-design-icons-git # MOVED: Available in Chaotic
 
 # --- Audio & Media ---
 pipewire
@@ -60,7 +73,7 @@ ttf-fira-sans
 ttf-font-awesome
 noto-fonts
 noto-fonts-emoji
-papirus-icon-theme      # ADDED: Required fallback for Rofi/Thunar
+papirus-icon-theme
 
 # --- Core Tools ---
 chezmoi
@@ -84,7 +97,7 @@ android-udev
 libmtp
 gvfs-mtp
 openssh
-man-db                  # ADDED: Essential for 'man' command
+man-db
 
 # --- Virtualization & Dev ---
 podman
