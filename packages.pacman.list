@@ -3,32 +3,42 @@ hyprland
 xdg-desktop-portal-hyprland
 waybar
 rofi-wayland
-swaync                  # REPLACED: dunst -> swaync (ML4W default)
-swww                    # ADDED: Wallpaper daemon (ML4W default)
+swaync
+swww                    # Wallpaper daemon
 hyprlock
 hypridle
+hyprshade               # Blue light filter
 polkit-gnome
 thunar
 tumbler
 libnotify
 brightnessctl
 networkmanager
-network-manager-applet  # ADDED: System tray icon
+network-manager-applet
 bluez
 bluez-utils
-blueman                 # ADDED: Bluetooth GUI
-kitty                   # Required: Default terminal for ML4W scripts
-fastfetch               # Required: Used in default terminal splash
-imagemagick             # Required: Used for wallpaper effect generation
+blueman
+kitty                   # Critical: ML4W scripts hardcode 'kitty'
+fastfetch
+imagemagick
+pinta
+uwsm
 starship                # ADDED: Critical for shell prompt
 xdg-user-dirs           # ADDED: Generates ~/Downloads, etc.
 
-# --- Screenshot & Clipboard (Critical for ML4W) ---
+# --- CRITICAL: Screenshot & Clipboard ---
 grim
 slurp
 swappy
 wl-clipboard
 cliphist
+
+# --- Python Dependencies (Required for Apps) ---
+python-pip
+python-gobject
+python-screeninfo
+python-pywayland
+python-requests
 
 # --- Audio & Media ---
 pipewire
@@ -36,21 +46,23 @@ pipewire-alsa
 pipewire-pulse
 wireplumber
 pavucontrol
-playerctl               # ADDED: Media keys support
-pamixer                 # ADDED: Volume keys support
+playerctl
+pamixer
 ffmpeg
 libva
 libva-utils
 vdpauinfo
+loupe
 
-# --- Fonts & Appearance ---
+# --- Fonts & Icons ---
 ttf-jetbrains-mono-nerd
+ttf-fira-sans
+ttf-font-awesome
 noto-fonts
 noto-fonts-emoji
-ttf-font-awesome
-papirus-icon-theme      # ADDED: Default icon theme
+papirus-icon-theme      # ADDED: Required fallback for Rofi/Thunar
 
-# --- Core Tools (Shell & Utils) ---
+# --- Core Tools ---
 chezmoi
 zsh
 git
@@ -61,30 +73,33 @@ jq
 tree
 fzf
 rsync
-openssh
-man-db
+eza
+pacman-contrib
 gnome-disk-utility
 ethtool
 libxcvt
+power-profiles-daemon
+android-tools
+android-udev
+libmtp
+gvfs-mtp
+openssh
+man-db                  # ADDED: Essential for 'man' command
 
 # --- Virtualization & Dev ---
 podman
 distrobox
 uv
-android-tools
-android-udev
-libmtp
-gvfs-mtp
 qutebrowser
+visual-studio-code-bin
 
-# --- Applications (Chaotic AUR / Official) ---
+# --- Applications ---
 obsidian
 telegram-desktop
 hplip
 qt5-wayland
 qt6-wayland
 openrgb
-visual-studio-code-bin
 sunshine
 netbird
 synology-drive
