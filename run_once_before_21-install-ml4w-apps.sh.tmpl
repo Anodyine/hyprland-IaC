@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# This script installs the custom ML4W Python Apps (Welcome, Settings, Sidebar)
+# It mimics the logic from _ml4w-apps.sh but makes it idempotent.
+
+set -e
+
+APP_DIR="$HOME/.local/share/ml4w/apps"
+BIN_DIR="$HOME/.local/bin"
+
+mkdir -p "$APP_DIR"
+mkdir -p "$BIN_DIR"
+
+install_app() {
+    local repo_name="$1"
+    local app_name="$2"
+    local install_path="$APP_DIR/$app_name"
+
+    echo "[ML4W] Checking $app_name..."
+
+    # Only install if missing (or you can force update by removing this check)
+    if [ -d "$install_path" ]; then
+        echo "  - Already installed. Skipping."
+    else
+        echo "  - Installing from $repo_name..."
+        # Clone and run setup logic manually to avoid blind curl|bash
+        git clone "https://github.com/mylinuxforwork/$repo_name.git" "$install_path"
+        
+        # Link the executable
+        if [ -f "$install_path/$app_name" ]; then
+            chmod +x "$install_path/$app_name"
+            ln -sf "$install_path/$app_name" "$BIN_DIR/$app_name"
+            echo "  - Linked $app_name to $BIN_DIR"
+        fi
+        
+        # Install desktop file if it exists
+        if [ -f "$install_path/$app_name.desktop" ]; then
+            mkdir -p "$HOME/.local/share/applications"
+            cp "$install_path/$app_name.desktop" "$HOME/.local/share/applications/"
+            echo "  - Installed desktop file"
+        fi
+    fi
+}
+
+# Install the Triad
+install_app "dotfiles-welcome" "com.ml4w.welcome"
+install_app "dotfiles-settings" "com.ml4w.settings"
+install_app "dotfiles-sidebar" "com.ml4w.sidebar"
+install_app "hyprland-settings" "com.ml4w.hyprlandsettings"
+
+echo "[ML4W] Apps installation complete."
