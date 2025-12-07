@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+# Run once: install VS Code extensions from a list
+# ChezMoi runs run_once_*.sh(.tmpl) after applying dotfiles.
+
+set -euo pipefail
+
+# -------------------------
+# Logging helpers
+# -------------------------
+info() { printf "[INFO] %s\n" "$*"; }
+warn() { printf "[WARN] %s\n" "$*" >&2; }
+err()  { printf "[ERROR] %s\n" "$*" >&2; }
+
+# -------------------------
+# Detect a VS Code CLI
+# -------------------------
+detect_code_cli() {
+  local candidates=("code" "code-oss" "codium" "vscodium")
+  local c
+  for c in "${candidates[@]}"; do
+    if command -v "$c" >/dev/null 2>&1; then
+      printf "%s\n" "$c"
+      return 0
+    fi
+  done
+  if command -v flatpak >/dev/null 2>&1 && flatpak info com.visualstudio.code >/devnull 2>&1; then
+    printf "%s\n" "flatpak run com.visualstudio.code"
+    return 0
+  fi
+  return 1
+}
+
+# Turn the detected command into an argv array (handles "flatpak run ...")
+code_cmd_array() {
+  local detected; detected="$(detect_code_cli)" || return 1
+  read -r -a CODE_CMD <<<"$detected"
+  printf "%s\0" "${CODE_CMD[@]}"
+}
+
+# -------------------------
+# Helpers
+# -------------------------
+ext_list_to_array() {
+  local list_file="$1"
+  mapfile -t _OUT < <(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$list_file")
+  printf "%s\0" "${_OUT[@]}"
+}
+
+get_installed_exts() {
+  local -a CODE_CMD=()
+  while IFS= read -r -d '' part; do CODE_CMD+=("$part"); done < <(code_cmd_array)
+  mapfile -t _INST < <("${CODE_CMD[@]}" --list-extensions 2>/dev/null || true)
+  printf "%s\0" "${_INST[@]}"
+}
+
+is_running_vscode() {
+  pgrep -fa '(Code - OSS|VSCodium|code)' >/dev/null 2>&1
+}
+
+install_with_retries() {
+  local ext="$1"
+  local tries="${2:-3}"
+  local delay_s="${3:-2}"
+
+  local -a CODE_CMD=()
+  while IFS= read -r -d '' part; do CODE_CMD+=("$part"); done < <(code_cmd_array)
+
+  local attempt
+  for attempt in $(seq 1 "$tries"); do
+    info "Installing: $ext (attempt $attempt/$tries)"
+    if "${CODE_CMD[@]}" --install-extension "$ext"; then
+      return 0
+    fi
+    warn "Install failed for $ext on attempt $attempt"
+    sleep "$delay_s"
+  done
+  return 1
+}
+
+# -------------------------
+# Main installer
+# -------------------------
+install_vscode_extensions_from_list() {
+  local repo_dir="$HOME/.local/share/chezmoi"
+  local list_file="${1:-$repo_dir/vscode-extensions.list}"
+
+  local -a CODE_CMD=()
+  if ! while IFS= read -r -d '' part; do CODE_CMD+=("$part"); done < <(code_cmd_array); then
+    err "VS Code CLI not found on PATH. Install Code (code), Code - OSS (code-oss), or VSCodium (codium)."
+    return 1
+  fi
+
+  info "Installing VS Code extensions from $list_file using '${CODE_CMD[*]}'"
+
+  if [[ ! -f "$list_file" ]]; then
+    warn "No extensions list found at $list_file. Skipping."
+    return 0
+  fi
+
+  if is_running_vscode; then
+    warn "VS Code appears to be running. This can cause CLI crashes. Consider closing it during installation."
+  fi
+
+  # Desired
+  local -a extensions=()
+  while IFS= read -r -d '' e; do extensions+=("$e"); done < <(ext_list_to_array "$list_file")
+  if [[ ${#extensions[@]} -eq 0 ]]; then
+    info "No extensions listed. Skipping."
+    return 0
+  fi
+
+  # Installed (initial)
+  local tmp_installed=""
+  trap '[[ -n "${tmp_installed-}" ]] && rm -f "$tmp_installed"' EXIT
+  tmp_installed="$(mktemp)"
+
+  while IFS= read -r -d '' x; do printf "%s\n" "$x"; done < <(get_installed_exts) | sort -u >"$tmp_installed"
+
+  # First pass
+  local -a failed=()
+  local ext
+  for ext in "${extensions[@]}"; do
+    if grep -qxF "$ext" "$tmp_installed"; then
+      info "Already installed: $ext"
+      continue
+    fi
+    if ! install_with_retries "$ext" 3 2; then
+      failed+=("$ext")
+    fi
+    # refresh installed cache after each attempt
+    while IFS= read -r -d '' x; do printf "%s\n" "$x"; done < <(get_installed_exts) | sort -u >"$tmp_installed"
+  done
+
+  # Reconciliation pass to handle transient CLI crashes
+  local -a missing_after=()
+  for ext in "${extensions[@]}"; do
+    if ! grep -qxF "$ext" "$tmp_installed"; then
+      missing_after+=("$ext")
+    fi
+  done
+
+  if ((${#missing_after[@]})); then
+    warn "Re-trying missing installs after CLI crash: ${missing_after[*]}"
+    local -a still_missing=()
+    for ext in "${missing_after[@]}"; do
+      if ! install_with_retries "$ext" 3 3; then
+        still_missing+=("$ext")
+      fi
+    done
+    # final check
+    : >"$tmp_installed"
+    while IFS= read -r -d '' x; do printf "%s\n" "$x"; done < <(get_installed_exts) | sort -u >"$tmp_installed"
+    local -a final_missing=()
+    for ext in "${extensions[@]}"; do
+      grep -qxF "$ext" "$tmp_installed" || final_missing+=("$ext")
+    done
+
+    if ((${#final_missing[@]})); then
+      warn "These extensions failed to install: ${final_missing[*]}"
+      return 2
+    fi
+  fi
+
+  info "Finished installing VS Code extensions."
+  return 0
+}
+
+main() {
+  install_vscode_extensions_from_list "${1:-}"
+}
+
+main "$@"
