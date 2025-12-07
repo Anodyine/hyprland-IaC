@@ -1,29 +1,90 @@
-chezmoi
-zsh
-uv
-visual-studio-code-bin
-gnome-disk-utility
-android-tools
-libmtp
-gvfs-mtp
-android-udev
-sunshine
-fzf
-netbird
+# --- ML4W Core (The Desktop Environment) ---
+hyprland
+xdg-desktop-portal-hyprland
+waybar
+rofi-wayland
+swaync                  # REPLACED: dunst -> swaync (ML4W default)
+swww                    # ADDED: Wallpaper daemon (ML4W default)
+hyprlock
+hypridle
+polkit-gnome
+thunar
+tumbler
+libnotify
+brightnessctl
+networkmanager
+network-manager-applet  # ADDED: System tray icon
+bluez
+bluez-utils
+blueman                 # ADDED: Bluetooth GUI
+kitty                   # Required: Default terminal for ML4W scripts
+fastfetch               # Required: Used in default terminal splash
+imagemagick             # Required: Used for wallpaper effect generation
+starship                # ADDED: Critical for shell prompt
+xdg-user-dirs           # ADDED: Generates ~/Downloads, etc.
+
+# --- Screenshot & Clipboard (Critical for ML4W) ---
+grim
+slurp
+swappy
+wl-clipboard
+cliphist
+
+# --- Audio & Media ---
+pipewire
+pipewire-alsa
+pipewire-pulse
+wireplumber
+pavucontrol
+playerctl               # ADDED: Media keys support
+pamixer                 # ADDED: Volume keys support
+ffmpeg
 libva
 libva-utils
 vdpauinfo
-ffmpeg
-qutebrowser
-rsync
-distrobox
-podman
-qt5-wayland
-synology-drive
-obsidian
-telegram-desktop
+
+# --- Fonts & Appearance ---
+ttf-jetbrains-mono-nerd
+noto-fonts
+noto-fonts-emoji
+ttf-font-awesome
+papirus-icon-theme      # ADDED: Default icon theme
+
+# --- Core Tools (Shell & Utils) ---
+chezmoi
+zsh
+git
+curl
+wget
+unzip
 jq
 tree
-hplip
+fzf
+rsync
+openssh
+man-db
+gnome-disk-utility
 ethtool
 libxcvt
+
+# --- Virtualization & Dev ---
+podman
+distrobox
+uv
+android-tools
+android-udev
+libmtp
+gvfs-mtp
+qutebrowser
+
+# --- Applications (Chaotic AUR / Official) ---
+obsidian
+telegram-desktop
+hplip
+qt5-wayland
+qt6-wayland
+openrgb
+visual-studio-code-bin
+sunshine
+netbird
+synology-drive

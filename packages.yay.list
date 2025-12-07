@@ -1,1 +1,8 @@
+# --- Your Apps ---
 via-bin
+
+# --- ML4W Dependencies ---
+wlogout
+bibata-cursor-theme
+nwg-look
+python-pywal            # ADDED: Required for color scheme generation
