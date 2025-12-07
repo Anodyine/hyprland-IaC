@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Run once: install VS Code extensions from a list
 # ChezMoi runs run_once_*.sh(.tmpl) after applying dotfiles.
+# Hash: {{ include "vscode-extensions.list" | sha256sum }}
 
 set -euo pipefail
 
