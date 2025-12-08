@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# -----------------------------------------------------------------------------
+# ML4W BASE INSTALLER (STOW METHOD)
+# 1. Clones the official ML4W repo.
+# 2. Uses GNU Stow to symlink the 'dotfiles' package to ~.
+# -----------------------------------------------------------------------------
+
+set -e
+
+# --- Configuration ---
+REPO_URL="https://github.com/mylinuxforwork/dotfiles.git"
+INSTALL_DIR="$HOME/.ml4w-dotfiles"
+BACKUP_DIR="$HOME/.config_backup_$(date +%Y%m%d_%H%M%S)"
+
+# --- Functions ---
+log() { echo -e "\033[0;32m[ML4W Base]\033[0m $1"; }
+warn() { echo -e "\033[0;33m[WARN]\033[0m $1"; }
+
+# --- 1. Clone the Official Repo ---
+if [ -d "$INSTALL_DIR" ]; then
+    log "Repo exists at $INSTALL_DIR. Pulling updates..."
+    # We allow git pull to fail (e.g. if dirty) without breaking the script
+    git -C "$INSTALL_DIR" pull || warn "Git pull failed. Continuing with existing files."
+else
+    log "Cloning Official ML4W Dotfiles..."
+    git clone "$REPO_URL" "$INSTALL_DIR"
+fi
+
+# --- 2. Conflict Resolution (Pre-Stow) ---
+# Stow will refuse to run if a target is a real file/folder. We must move them.
+# We look inside the repo's 'dotfiles' folder to see what it wants to install.
+SOURCE_DOTFILES="$INSTALL_DIR/dotfiles"
+
+if [ ! -d "$SOURCE_DOTFILES" ]; then
+    echo "ERROR: 'dotfiles' folder not found in repo."
+    exit 1
+fi
+
+log "Checking for conflicts..."
+# Use find to list immediate children (hidden and non-hidden) of the source
+find "$SOURCE_DOTFILES" -mindepth 1 -maxdepth 1 -printf "%P\n" | while read item; do
+    target="$HOME/$item"
+    
+    # If the target exists and is NOT a symlink, it's a conflict
+    if [ -e "$target" ] && [ ! -L "$target" ]; then
+        warn "Conflict: $target is a real file/directory. Backing up..."
+        mkdir -p "$BACKUP_DIR"
+        mv "$target" "$BACKUP_DIR/"
+    fi
+done
+
+# --- 3. Run Stow ---
+log "Linking dotfiles with Stow..."
+# -d: directory containing packages (repo root)
+# -t: target directory (home)
+# --adopt: crucial flag; if a file exists, adopt it into the package instead of failing
+# dotfiles: the package name
+cd "$INSTALL_DIR"
+stow -d "$INSTALL_DIR" -t "$HOME" dotfiles
+
+# --- 4. Run the ML4W Hook (Optional) ---
+# This generates initial templates (like waybar config) if needed
+HOOK_SCRIPT="$INSTALL_DIR/hook.sh"
+if [ -f "$HOOK_SCRIPT" ]; then
+    log "Running ML4W Hook..."
+    bash "$HOOK_SCRIPT"
+fi
+
+log "Base installation complete."
