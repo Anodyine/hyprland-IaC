@@ -1,16 +1,19 @@
 {
   "update.mode": "none", 
   "workbench.colorTheme": "Monokai Pro (Filter Ristretto)",
-    "vim.handleKeys": {
-        "<C-c>": false,
-        "<C-v>": false,
-        "<C-a>": false,
-        "<C-x>": false,
-        "<C-p>": false,
-        "<C-f>": false,
-        "<C-z>": false
-    },
-    "keyboard.dispatch": "keyCode",
-    "workbench.iconTheme": "Monokai Pro (Filter Ristretto) Icons",
-    "terminal.integrated.defaultProfile.linux": "zsh"
+  "vim.handleKeys": {
+      "<C-c>": false,
+      "<C-v>": false,
+      "<C-a>": false,
+      "<C-x>": false,
+      "<C-p>": false,
+      "<C-f>": false,
+      "<C-z>": false
+  },
+  "keyboard.dispatch": "keyCode",
+  "workbench.iconTheme": "Monokai Pro (Filter Ristretto) Icons",
+  "terminal.integrated.defaultProfile.linux": "zsh",
+  "editor.fontSize": 14,
+  "terminal.integrated.fontSize": 14,
+  "window.zoomLevel": 0.9,
 }
