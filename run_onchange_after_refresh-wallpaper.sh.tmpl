@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# This comment includes the hash of the config file.
-# When config.ini.tmpl changes, this hash changes, triggering the script.
 # hash: {{ include "dot_mydotfiles/com.ml4w.dotfiles/dot_config/waypaper/config.ini.tmpl" | sha256sum }}
 
-# Only run if waypaper is installed (avoid errors on headless servers)
 if command -v waypaper >/dev/null 2>&1; then
-    echo "[Waypaper] Config changed. Restoring wallpaper..."
-    # We run this in the background so it doesn't block the rest of the apply
-    waypaper --restore &
+    echo "[Waypaper] Config changed. Restoring wallpaper in background..."
+    
+    # 1. nohup: Ignores the hangup signal when the shell exits
+    # 2. >/dev/null 2>&1: Closes the stdout/stderr pipes so Chezmoi doesn't wait
+    # 3. &: Puts it in the background
+    nohup waypaper --restore >/dev/null 2>&1 & disown
 fi
