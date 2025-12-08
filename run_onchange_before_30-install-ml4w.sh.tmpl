@@ -4,7 +4,7 @@
 # RUN_ONCHANGE TRIGGER: Forces this script to run whenever the external ML4W
 # Git repository's HEAD commit hash changes, ensuring immediate base updates.
 # -----------------------------------------------------------------------------
-
+ml4wDotfilesDir="$HOME/.ml4w-dotfiles"
 # hash: {{ output "git" "-C" .ml4wDotfilesDir "rev-parse" "HEAD" | sha256sum }}
 
 set -e
@@ -19,12 +19,15 @@ BACKUP_DIR="$HOME/.config_backup_$(date +%Y%m%d_%H%M%S)"
 log() { echo -e "\033[0;32m[ML4W]\033[0m $1"; }
 warn() { echo -e "\033[0;33m[WARN]\033[0m $1"; }
 
-# --- 1. Clone Repo ---
+# -----------------------------------------------------------------------------
+# 1. Clone/Update the ML4W Base
+# -----------------------------------------------------------------------------
 if [ -d "$INSTALL_DIR" ]; then
-    log "Updating Repo..."
-    git -C "$INSTALL_DIR" pull || warn "Git pull failed. Using existing files."
+    log "ML4W Repo exists. Running Git Pull to check for updates..."
+    # Update existing repo and allow it to fail if local patches (from Chezmoi) exist
+    git -C "$INSTALL_DIR" pull || warn "Git pull failed due to local changes. Continuing."
 else
-    log "Cloning Repo..."
+    log "Cloning ML4W Base Repository..."
     git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
@@ -48,28 +51,23 @@ for repo_folder in "$REPO_CONFIG"/*; do
     if [ ! -e "$target" ] || [ -L "$target" ]; then
         # Update link if needed
         ln -sfn "$repo_folder" "$target"
-        # log "Linked Folder: $name"
         
     # CASE B: Target is a real directory (Chezmoi created it) -> Merge files
     elif [ -d "$target" ]; then
-        # log "Merging $name..."
         
         # Loop through files inside the repo folder and link them individually
         find "$repo_folder" -mindepth 1 -maxdepth 1 | while read repo_file; do
             filename=$(basename "$repo_file")
             target_file="$target/$filename"
             
-            # Only link if the file doesn't exist (Preserve your Chezmoi overrides)
-            # OR if it's already a symlink (Update it)
+            # Only link if the file doesn't exist OR if it's already a symlink (Update it)
             if [ ! -e "$target_file" ] || [ -L "$target_file" ]; then
                 ln -sf "$repo_file" "$target_file"
             else
-                # If it's a real file, that means YOU defined it in Chezmoi.
-                # We skip it so your version wins.
+                # Skip if the file is a real file (Your custom version wins)
                 true 
             fi
         done
-        log "Merged Folder: $name"
     fi
 done
 
@@ -88,4 +86,4 @@ if [ -f "$HOOK" ]; then
     bash "$HOOK"
 fi
 
-log "Done."
+log "Base installation complete."

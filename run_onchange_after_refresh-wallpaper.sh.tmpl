@@ -1,6 +1,5 @@
 #!/bin/bash
-
-# hash: {{ include "dot_mydotfiles/com.ml4w.dotfiles/dot_config/waypaper/config.ini.tmpl" | sha256sum }}
+# hash: {{ include "dot_config/waypaper/config.ini.tmpl" | sha256sum }}
 
 if command -v waypaper >/dev/null 2>&1; then
     echo "[Waypaper] Config changed. Restoring wallpaper in background..."
