@@ -55,7 +55,6 @@ python-screeninfo
 python-pywayland
 python-requests
 python-pywal
-python-pywalfox
 
 # --- Theming ---
 matugen
@@ -85,8 +84,6 @@ vlc                     # ADDED: Media player (from pkgs.sh)
 ttf-jetbrains-mono-nerd
 ttf-fira-sans
 ttf-font-awesome
-ttf-bebas-neue
-ttf-material-design-icons-git
 noto-fonts
 noto-fonts-emoji
 

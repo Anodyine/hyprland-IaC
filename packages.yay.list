@@ -1,2 +1,6 @@
 # --- Hardware / Specific ---
 via-bin                 # Keyboard config tool (keep in AUR)
+
+python-pywalfox
+ttf-bebas-neue
+ttf-material-design-icons-git

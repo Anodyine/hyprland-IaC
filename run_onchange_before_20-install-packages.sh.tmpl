@@ -42,7 +42,11 @@ CHAOTIC_MIRRORLIST_URL='https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirror
 read_list() {
   local file="$1"
   [ -f "$file" ] || return 1
-  sed -e 's/#.*$//' -e '/^\s*$/d' "$file"
+  # 1. Remove comments
+  # 2. Trim trailing whitespace (The Fix)
+  # 3. Trim leading whitespace
+  # 4. Remove empty lines
+  sed -e 's/#.*$//' -e 's/[[:space:]]*$//' -e 's/^[[:space:]]*//' -e '/^$/d' "$file"
 }
 
 preflight() {
