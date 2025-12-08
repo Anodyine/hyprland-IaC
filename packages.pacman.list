@@ -1,15 +1,18 @@
 # --- ML4W Core (The Desktop Environment) ---
 hyprland
 xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk  # ADDED: Fallback portal
 waybar
 rofi-wayland
 swaync
 swww
 hyprlock
 hypridle
-hyprshade               # MOVED: Available in Chaotic
+hyprpicker              # ADDED: Color picker (from pkgs.sh)
+hyprshade
 polkit-gnome
 thunar
+nautilus                # ADDED: Fallback file manager (from pkgs.sh)
 tumbler
 libnotify
 brightnessctl
@@ -23,8 +26,18 @@ fastfetch
 imagemagick
 pinta
 uwsm
-starship                # ADDED: Critical for shell prompt
-xdg-user-dirs           # ADDED: Generates ~/Downloads, etc.
+starship                # RESTORED: Critical for older ML4W configs
+oh-my-posh              # ADDED: Critical for newer ML4W configs
+xdg-user-dirs           # RESTORED: Generates ~/Downloads
+gum
+inotify-tools           # ADDED: Required for Waybar auto-reload
+figlet                  # ADDED: ASCII art for scripts
+
+# --- Dock & Widgets (Chaotic/Official) ---
+nwg-dock-hyprland       # ADDED: The dock (from pkgs.sh)
+nwg-look
+wlogout
+waypaper
 
 # --- CRITICAL: Screenshot & Clipboard ---
 grim
@@ -32,7 +45,8 @@ slurp
 swappy
 wl-clipboard
 cliphist
-grimblast-git           # MOVED: Available in Chaotic
+grimblast-git
+xclip                   # ADDED: X11 clipboard fallback (from pkgs.sh)
 
 # --- Python Dependencies ---
 python-pip
@@ -40,18 +54,17 @@ python-gobject
 python-screeninfo
 python-pywayland
 python-requests
-python-pywal            # MOVED: Available in Chaotic
+python-pywal
+python-pywalfox
 
-# --- Theming (Chaotic AUR Optimized) ---
-wlogout                 # MOVED: Available in Chaotic
-nwg-look                # MOVED: Available in Chaotic
-waypaper                # MOVED: Available in Chaotic
-matugen                 # MOVED: Use 'matugen' (pre-built), not '-bin'
-oh-my-posh              # MOVED: Use 'oh-my-posh' (pre-built), not '-bin'
-bibata-cursor-theme     # MOVED: Available in Chaotic
-colloid-icon-theme-git  # MOVED: Available in Chaotic
-ttf-bebas-neue          # MOVED: Available in Chaotic
-ttf-material-design-icons-git # MOVED: Available in Chaotic
+# --- Theming ---
+matugen
+bibata-cursor-theme
+colloid-icon-theme-git
+papirus-icon-theme
+breeze                  # ADDED: GTK/Cursor theme (from pkgs.sh)
+qt5ct                   # ADDED: QT5 theming
+qt6ct                   # ADDED: QT6 theming
 
 # --- Audio & Media ---
 pipewire
@@ -66,14 +79,16 @@ libva
 libva-utils
 vdpauinfo
 loupe
+vlc                     # ADDED: Media player (from pkgs.sh)
 
-# --- Fonts & Icons ---
+# --- Fonts ---
 ttf-jetbrains-mono-nerd
 ttf-fira-sans
 ttf-font-awesome
+ttf-bebas-neue
+ttf-material-design-icons-git
 noto-fonts
 noto-fonts-emoji
-papirus-icon-theme
 
 # --- Core Tools ---
 chezmoi
@@ -95,9 +110,13 @@ power-profiles-daemon
 android-tools
 android-udev
 libmtp
+gvfs
 gvfs-mtp
 openssh
 man-db
+htop                    # ADDED: (from pkgs.sh)
+vim                     # ADDED: (from pkgs.sh)
+neovim                  # ADDED: (from pkgs.sh)
 
 # --- Virtualization & Dev ---
 podman

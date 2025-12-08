@@ -1,5 +1,2 @@
 # --- Hardware / Specific ---
 via-bin                 # Keyboard config tool (keep in AUR)
-
-# --- Browser Integrations ---
-python-pywalfox         # Sometimes in Chaotic, but safer in AUR
