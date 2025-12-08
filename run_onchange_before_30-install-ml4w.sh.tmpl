@@ -1,82 +1,91 @@
 #!/bin/bash
 
 # -----------------------------------------------------------------------------
-# ML4W BASE INSTALLER (STOW METHOD - STRICT MODE)
-# 1. Clones the official ML4W repo.
-# 2. Aggressively backs up conflicts (files OR wrong symlinks).
-# 3. Uses GNU Stow to symlink the 'dotfiles' package to ~.
+# RUN_ONCHANGE TRIGGER: Forces this script to run whenever the external ML4W
+# Git repository's HEAD commit hash changes, ensuring immediate base updates.
 # -----------------------------------------------------------------------------
+
+# hash: {{ output "git" "-C" .ml4wDotfilesDir "rev-parse" "HEAD" | sha256sum }}
 
 set -e
 
 # --- Configuration ---
 REPO_URL="https://github.com/mylinuxforwork/dotfiles.git"
-INSTALL_DIR="$HOME/.ml4w-dotfiles"
+INSTALL_DIR="{{ .ml4wDotfilesDir }}"
+TARGET_DIR="$HOME/.config"
 BACKUP_DIR="$HOME/.config_backup_$(date +%Y%m%d_%H%M%S)"
 
 # --- Functions ---
-log() { echo -e "\033[0;32m[ML4W Base]\033[0m $1"; }
+log() { echo -e "\033[0;32m[ML4W]\033[0m $1"; }
 warn() { echo -e "\033[0;33m[WARN]\033[0m $1"; }
 
-# --- 1. Clone the Official Repo ---
+# --- 1. Clone Repo ---
 if [ -d "$INSTALL_DIR" ]; then
-    log "Repo exists at $INSTALL_DIR. Pulling updates..."
-    # We allow git pull to fail (e.g. if dirty) without breaking the script
-    git -C "$INSTALL_DIR" pull || warn "Git pull failed. Continuing with existing files."
+    log "Updating Repo..."
+    git -C "$INSTALL_DIR" pull || warn "Git pull failed. Using existing files."
 else
-    log "Cloning Official ML4W Dotfiles..."
+    log "Cloning Repo..."
     git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
-# --- 2. Conflict Resolution (Pre-Stow) ---
-# Stow will refuse to run if a target exists and isn't owned by Stow.
-# We must move ANY file or link that conflicts out of the way.
-SOURCE_DOTFILES="$INSTALL_DIR/dotfiles"
+# --- 2. Link Configuration ---
+REPO_CONFIG="$INSTALL_DIR/dotfiles/.config"
 
-if [ ! -d "$SOURCE_DOTFILES" ]; then
-    echo "ERROR: 'dotfiles' folder not found in repo."
+if [ ! -d "$REPO_CONFIG" ]; then
+    echo "ERROR: Repo config not found at $REPO_CONFIG"
     exit 1
 fi
 
-log "Checking for conflicts..."
+mkdir -p "$TARGET_DIR"
 
-# Loop through every file/folder in the repo's dotfiles source
-find "$SOURCE_DOTFILES" -mindepth 1 -maxdepth 1 -printf "%P\n" | while read item; do
-    target="$HOME/$item"
-    
-    # Check if the target exists (symlink or file)
-    if [ -e "$target" ] || [ -L "$target" ]; then
+log "Linking config resources..."
+
+for repo_folder in "$REPO_CONFIG"/*; do
+    name=$(basename "$repo_folder")
+    target="$TARGET_DIR/$name"
+
+    # CASE A: Target doesn't exist or is a symlink -> Link the whole folder
+    if [ ! -e "$target" ] || [ -L "$target" ]; then
+        # Update link if needed
+        ln -sfn "$repo_folder" "$target"
+        # log "Linked Folder: $name"
         
-        # Check if it is ALREADY a correct symlink pointing to our repo
-        if [ -L "$target" ]; then
-            current_link=$(readlink -f "$target")
-            # If the link points inside our install dir, it's good. Skip backup.
-            if [[ "$current_link" == "$INSTALL_DIR"* ]]; then
-                continue 
+    # CASE B: Target is a real directory (Chezmoi created it) -> Merge files
+    elif [ -d "$target" ]; then
+        # log "Merging $name..."
+        
+        # Loop through files inside the repo folder and link them individually
+        find "$repo_folder" -mindepth 1 -maxdepth 1 | while read repo_file; do
+            filename=$(basename "$repo_file")
+            target_file="$target/$filename"
+            
+            # Only link if the file doesn't exist (Preserve your Chezmoi overrides)
+            # OR if it's already a symlink (Update it)
+            if [ ! -e "$target_file" ] || [ -L "$target_file" ]; then
+                ln -sf "$repo_file" "$target_file"
+            else
+                # If it's a real file, that means YOU defined it in Chezmoi.
+                # We skip it so your version wins.
+                true 
             fi
-        fi
-
-        # If we reached here, it's a conflict (Real file OR Wrong Symlink)
-        warn "Conflict: $target (Not owned by ML4W). Backing up..."
-        mkdir -p "$BACKUP_DIR"
-        mv "$target" "$BACKUP_DIR/"
+        done
+        log "Merged Folder: $name"
     fi
 done
 
-# --- 3. Run Stow ---
-log "Linking dotfiles with Stow..."
-# -d: directory containing packages (repo root)
-# -t: target directory (home)
-# --adopt: adopt any files that somehow slipped through (failsafe)
-cd "$INSTALL_DIR"
-stow -d "$INSTALL_DIR" -t "$HOME" --adopt dotfiles
+# --- 3. Link Root Dotfiles (.zshrc, etc) ---
+REPO_ROOT="$INSTALL_DIR/dotfiles"
+for file in ".zshrc" ".bashrc" ".xinitrc" ".gtkrc-2.0"; do
+    src="$REPO_ROOT/$file"
+    target="$HOME/$file"
+    ln -sf "$src" "$target"
+done
 
-# --- 4. Run the ML4W Hook (Optional) ---
-# This generates initial templates (like waybar config) if needed
-HOOK_SCRIPT="$INSTALL_DIR/hook.sh"
-if [ -f "$HOOK_SCRIPT" ]; then
-    log "Running ML4W Hook..."
-    bash "$HOOK_SCRIPT"
+# --- 4. Run ML4W Hook ---
+HOOK="$INSTALL_DIR/hook.sh"
+if [ -f "$HOOK" ]; then
+    log "Running Post-Install Hook..."
+    bash "$HOOK"
 fi
 
-log "Base installation complete."
+log "Done."
