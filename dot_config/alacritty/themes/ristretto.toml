@@ -1,0 +1,29 @@
+# Ristretto / Coffee Theme
+
+[colors.primary]
+background = "#2c2525"
+foreground = "#e6d6c8"
+
+[colors.cursor]
+text = "#2c2525"
+cursor = "#e6d6c8"
+
+[colors.normal]
+black   = "#564d4d"
+red     = "#fd6883"
+green   = "#adda78"
+yellow  = "#f9cc6c"
+blue    = "#f38d8d"
+magenta = "#a8a9eb"
+cyan    = "#85dacc"
+white   = "#fff1f3"
+
+[colors.bright]
+black   = "#726161"
+red     = "#fd6883"
+green   = "#adda78"
+yellow  = "#f9cc6c"
+blue    = "#f38d8d"
+magenta = "#a8a9eb"
+cyan    = "#85dacc"
+white   = "#fff1f3"
