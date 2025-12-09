@@ -3,3 +3,4 @@ via-bin                 # Keyboard config tool (keep in AUR)
 
 ttf-bebas-neue
 ttf-material-design-icons-git
+python-pywalfox
