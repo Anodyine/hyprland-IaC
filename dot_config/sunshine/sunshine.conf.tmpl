@@ -1,0 +1,6 @@
+{{- if eq .chezmoi.hostname "arch-lenovo" -}}
+capture = kms
+encoder = nvenc
+adapter_name = /dev/dri/renderD129
+kms_device = /dev/dri/card0
+{{- end -}}

@@ -1,0 +1,25 @@
+{{- if eq .chezmoi.hostname "arch-lenovo" -}}
+#!/bin/bash
+set -euo pipefail
+
+# hash: {{ include "assets/edid/edid-arch-lenovo.bin" | sha256sum }}
+
+SRC="{{ .chezmoi.sourceDir }}/assets/edid/edid-arch-lenovo.bin"
+DEST="/usr/lib/firmware/edid/edid.bin" # Keep system name simple so GRUB doesn't need changing
+
+echo "Checking EDID configuration for arch-lenovo..."
+
+# If the file doesn't exist or differs, update it
+if [[ ! -f "$DEST" ]] || ! cmp -s "$SRC" "$DEST"; then
+    echo "⚡ EDID changed. Installing new binary..."
+    sudo mkdir -p "$(dirname "$DEST")"
+    sudo cp "$SRC" "$DEST"
+    
+    echo "⚡ Rebuilding initramfs (required for EDID override)..."
+    sudo mkinitcpio -P
+    
+    echo "✅ EDID installed. Reboot recommended if you see black screens."
+else
+    echo "✅ EDID is up to date."
+fi
+{{- end -}}
