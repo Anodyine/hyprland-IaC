@@ -1,0 +1,24 @@
+source = ~/.config/hypr/conf/monitors/default.conf
+
+
+{{ if eq .chezmoi.hostname "ml-server-2" -}}
+monitor=HDMI-A-1,1920x1200@60,auto,1
+monitor=DP-3,2560x1440@240,2048x0,1.25
+monitor=DP-2,2560x1440@240,0x0,1.25
+{{ else if eq .chezmoi.hostname "arch-lenovo" }}
+monitor=eDP-1,2560x1600@120,0x0,1.33334
+monitor=eDP-2,2560x1600@120,0x0,1.33334
+#monitor=DP-2,3440x1440@144,1996x-1352,1.25
+#monitor=DP-1,5120x1440@240,1536x-200,1.25
+
+#monitor=DP-3,1024x768@60,auto,1 # right
+monitor=DP-3,1024x768@60,-1024x0,1 # left
+#monitor=DP-3,1024x768@60,0x-768,1 # above
+
+#monitor=DP-3,1600x1200@60,-1600x0,1 # left
+#monitor=DP-3,2560x1920@60,-2560x0,1 # left
+#monitor=DP-3,1920x1440@60,-1920x0,1 # left
+#monitor=DP-3,1920x1200@60,-1920x0,1 # left
+{{ else }}
+# Modify chezmoi monitors.conf.tmpl to generate a config for this machine
+{{ end }}
