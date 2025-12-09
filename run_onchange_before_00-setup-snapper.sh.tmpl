@@ -44,7 +44,7 @@ fi
 # 3. Configure Retention & Permissions
 echo ">> [Chezmoi] Applying retention policy..."
 CONF="/etc/snapper/configs/root"
-USER="{{ .chezmoi.username }}"  # <--- Chezmoi variable used here
+USER="{{ .chezmoi.username }}" 
 
 echo "   Setting permissions for user: $USER"
 sudo chmod a+rx /.snapshots
@@ -88,10 +88,11 @@ sudo systemctl enable --now grub-btrfsd
 # 6. The Redirect Fix (Bootloader Stub)
 echo ">> [Chezmoi] Checking Bootloader Stub..."
 STUB_FILE="/boot/efi/grub/grub.cfg"
+GRUB_DIR="/boot/grub"
 
-# Only run the heavy Grub Install if the stub file is missing
-if [ ! -f "$STUB_FILE" ]; then
-    echo "   Stub missing. Installing GRUB modules and creating stub..."
+# Fix: If /boot/grub is missing, we MUST run install, even if the stub exists.
+if [ ! -f "$STUB_FILE" ] || [ ! -d "$GRUB_DIR" ] || [ -z "$(ls -A $GRUB_DIR)" ]; then
+    echo "   Stub missing OR /boot/grub missing. Installing GRUB modules..."
     
     sudo grub-install --target=x86_64-efi \
       --efi-directory=/boot/efi \
@@ -112,13 +113,17 @@ search --no-floppy --fs-uuid --set=root $ROOT_UUID
 set prefix=(\$root)/@/boot/grub
 configfile /@/boot/grub/grub.cfg
 EOF
-    echo "   Stub created."
+    echo "   Stub created and GRUB installed."
 else
-    echo "   Stub already exists at $STUB_FILE. Skipping reinstall."
+    echo "   Stub exists and /boot/grub is populated. Skipping reinstall."
 fi
 
 # 7. Generate Real Config
 echo ">> [Chezmoi] Regenerating main GRUB config..."
+
+# Fix: Ensure the directory exists before generating config
+sudo mkdir -p /boot/grub
+
 sudo grub-mkconfig -o /boot/grub/grub.cfg
 
 echo ">> [Chezmoi] Snapshot setup complete."
